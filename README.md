@@ -13,6 +13,9 @@ API REST para una plataforma de venta de entradas para eventos, con gestión de 
 - jsonwebtoken
 - cookie-parser
 - bcrypt
+- Passport.js
+- passport-custom
+
 
 ## Instalación
 
@@ -178,9 +181,15 @@ Respuesta:
 
 ## Autenticación
 
-La autenticación utiliza JSON Web Tokens (JWT).
+La autenticación utiliza Passport.js, JSON Web Tokens (JWT) y cookies HTTP Only.
 
-El token contiene:
+El sistema cuenta con las siguientes estrategias de Passport:
+
+- `register`: gestiona el registro de usuarios, validación de campos, normalización del email, hash de contraseña con bcrypt, validación de unicidad y rol por defecto.
+- `login`: valida las credenciales del usuario mediante email y contraseña.
+- `current`: valida el JWT almacenado en la cookie `currentUser` y deja el usuario disponible en `req.user`.
+
+El JWT contiene:
 
 - id
 - email
@@ -190,8 +199,12 @@ El tiempo de expiración del token se configura mediante la variable `JWT_EXPIRE
 
 El token se almacena en una cookie `httpOnly` llamada `currentUser`.
 
+El JWT es generado por el controller después de una autenticación exitosa mediante Passport.
+
 Las contraseñas de los usuarios se almacenan utilizando bcrypt.
+
+La configuración de Passport se encuentra centralizada en `src/config/passport.config.js`, permitiendo agregar futuras estrategias o providers externos como Google o GitHub sin modificar `app.js`.
 
 ## Estado del proyecto
 
-Pre-entrega 3
+Pre-entrega 4

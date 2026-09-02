@@ -3,6 +3,7 @@ import { connectDB } from './config/database.js'
 import {env} from './config/env.js'
 import { errorHandler } from "./middlewares/error.middleware.js";
 import cookieParser from "cookie-parser";
+import passport from "./config/passport.config.js";
 
 
 import userRouter from './routes/user.routes.js';
@@ -16,6 +17,7 @@ const app = express()
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(passport.initialize());
 app.use(express.urlencoded({extended: true}));
 
 

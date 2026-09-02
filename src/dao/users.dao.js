@@ -7,5 +7,9 @@ export const usersDAO = {
 
     getByEmail: async (email) => {
         return await userModel.findOne({ email });
+    },
+
+    getAll: async () => {
+        return await userModel.find().lean();
     }
 };

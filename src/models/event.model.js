@@ -1,12 +1,18 @@
-import {Schema, model} from "mongoose";
+import { Schema, model } from "mongoose";
 
-const eventSchema = new Schema ({
+const eventSchema = new Schema({
     name: String,
     date: Date,
     place: String,
     price: Number,
     capacity: Number,
-    status: Boolean
-})
+    status: Boolean,
 
-export const eventModel = model( "event", eventSchema);
+    organizer: {
+        type: Schema.Types.ObjectId,
+        ref: "user",
+        required: true
+    }
+});
+
+export const eventModel = model("event", eventSchema);

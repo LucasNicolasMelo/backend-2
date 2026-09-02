@@ -205,6 +205,89 @@ Las contraseñas de los usuarios se almacenan utilizando bcrypt.
 
 La configuración de Passport se encuentra centralizada en `src/config/passport.config.js`, permitiendo agregar futuras estrategias o providers externos como Google o GitHub sin modificar `app.js`.
 
+## Roles y autorización
+
+El sistema maneja tres roles de usuario:
+
+- `user`: usuario registrado.
+- `organizer`: organizador de eventos.
+- `admin`: administrador del sistema.
+
+El rol se establece por defecto como `user` durante el registro público. No es posible asignar los roles `organizer` o `admin` desde el endpoint público de registro.
+
+### Matriz de permisos
+
+| Acción | user | organizer | admin |
+|---|---|---|---|
+| Ver eventos publicados | Sí | Sí | Sí |
+| Crear eventos | No | Sí | Sí |
+| Modificar sus propios eventos | No | Sí | Sí |
+| Modificar eventos de otros organizadores | No | No | Sí |
+| Ver todos los usuarios | No | No | Sí |
+
+### Middleware de autenticación
+
+El middleware `auth` verifica la existencia y validez del JWT almacenado en la cookie `currentUser`.
+
+Cuando el token es válido, los datos del usuario quedan disponibles en `req.user`.
+
+Si el usuario no está autenticado o el token es inválido, se devuelve un código HTTP `401 Unauthorized`.
+
+### Middleware de autorización
+
+El middleware `authorize` permite definir qué roles pueden acceder a una ruta.
+
+Por ejemplo:
+
+```js
+authorize("organizer", "admin")
+
+```md
+permite el acceso únicamente a usuarios con rol `organizer` o `admin`.
+
+Si el usuario está autenticado pero no posee el rol requerido, se devuelve un código HTTP `403 Forbidden`.
+
+### Rutas protegidas
+
+#### Crear eventos
+
+POST /api/events
+
+Requiere autenticación y rol `organizer` o `admin`.
+
+El organizador se asigna automáticamente a partir del usuario autenticado.
+
+#### Modificar eventos
+
+PUT /api/events/:eventId
+
+Requiere autenticación y rol `organizer` o `admin`.
+
+Los organizadores solamente pueden modificar sus propios eventos. Los administradores pueden modificar cualquier evento.
+
+Si un organizador intenta modificar un evento perteneciente a otro organizador, se devuelve `403 Forbidden`.
+
+#### Ver todos los usuarios
+
+GET /api/users
+
+Requiere autenticación y rol `admin`.
+
+Un usuario autenticado con otro rol recibe `403 Forbidden`.
+
+#### Usuario actual
+
+GET /api/sessions/current
+
+Requiere autenticación.
+
+Sin una cookie JWT válida se devuelve `401 Unauthorized`.
+
+### Diferencia entre 401 y 403
+
+- `401 Unauthorized`: el usuario no está autenticado o el token no es válido.
+- `403 Forbidden`: el usuario está autenticado, pero no tiene permisos suficientes para realizar la acción.
+
 ## Estado del proyecto
 
-Pre-entrega 4
+Pre-entrega 5

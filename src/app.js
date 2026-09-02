@@ -2,6 +2,8 @@ import express from 'express'
 import { connectDB } from './config/database.js'
 import {env} from './config/env.js'
 import { errorHandler } from "./middlewares/error.middleware.js";
+import cookieParser from "cookie-parser";
+
 
 import userRouter from './routes/user.routes.js';
 import ticketRouter from './routes/ticket.routes.js';
@@ -13,6 +15,7 @@ import sessionsRouter from './routes/session.routes.js';
 const app = express()
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.urlencoded({extended: true}));
 
 

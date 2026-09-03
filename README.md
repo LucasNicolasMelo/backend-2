@@ -15,7 +15,7 @@ API REST para una plataforma de venta de entradas para eventos, con gestión de 
 - bcrypt
 - Passport.js
 - passport-custom
-
+- Nodemailer
 
 ## Instalación
 

@@ -8,6 +8,9 @@ export const usersDAO = {
     getByEmail: async (email) => {
         return await userModel.findOne({ email });
     },
+    getById: async (id) => {
+        return await userModel.findById(id);
+    },
 
     getAll: async () => {
         return await userModel.find().lean();

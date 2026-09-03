@@ -1,9 +1,5 @@
-import {
-    createTicket,
-    getMyTickets,
-    getEventTickets,
-    cancelTicket
-} from "../services/ticket.service.js";
+import { createTicket, getMyTickets, getEventTickets, cancelTicket } from "../services/ticket.service.js";
+import { ticketDTO } from "../dto/ticket.dto.js";
 
 
 export async function create(req, res, next) {
@@ -21,7 +17,7 @@ export async function create(req, res, next) {
         return res.status(201).json({
             status: "success",
             message: "Inscripción realizada correctamente",
-            payload: ticket
+            payload: ticketDTO(ticket)
         });
 
     } catch (error) {
@@ -37,7 +33,7 @@ export async function getMine(req, res, next) {
 
         return res.status(200).json({
             status: "success",
-            payload: tickets
+            payload: tickets.map(ticketDTO)
         });
 
     } catch (error) {
@@ -59,7 +55,7 @@ export async function getByEvent(req, res, next) {
 
         return res.status(200).json({
             status: "success",
-            payload: tickets
+            payload: tickets.map(ticketDTO)
         });
 
     } catch (error) {
@@ -82,7 +78,7 @@ export async function cancel(req, res, next) {
         return res.status(200).json({
             status: "success",
             message: "Ticket cancelado correctamente",
-            payload: ticket
+            payload: ticketDTO(ticket)
         });
 
     } catch (error) {

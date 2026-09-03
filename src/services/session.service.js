@@ -1,4 +1,4 @@
-import { createUser, getUserByEmail as getUserByEmailRepository } from "../repositories/users.repository.js";
+import { usersRepository } from "../repositories/users.repository.js";
 import { createHash } from "../utils/hash.js";
 
 export async function registerUser(userData) {
@@ -12,7 +12,7 @@ export async function registerUser(userData) {
         throw error;
     }
 
-    const existingUser = await getUserByEmailRepository(normalizedEmail);
+    const existingUser = await usersRepository.findByEmail(normalizedEmail);
 
     if (existingUser) {
         const error = new Error("El email ya está registrado");
@@ -22,7 +22,7 @@ export async function registerUser(userData) {
 
     const hashedPassword = await createHash(password);
 
-    const newUser = await createUser({
+    const newUser = await usersRepository.create({
         first_name,
         last_name,
         email: normalizedEmail,
@@ -33,5 +33,5 @@ export async function registerUser(userData) {
 }
 
 export async function getUserByEmail(email) {
-    return await getUserByEmailRepository(email);
+    return await usersRepository.findByEmail(email);
 }

@@ -34,14 +34,16 @@ npm install
 ## Variables de entorno
 
 PORT=3000
-
 NODE_ENV=development
-
 MONGO_URL=tu_url_de_mongodb
-
 JWT_SECRET=tu_clave_secreta
-
 JWT_EXPIRES_IN=1h
+
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USER=tu_email
+MAIL_PASS=tu_app_password
+MAIL_FROM=tu_email
 
 ## Cómo ejecutar
 
@@ -390,10 +392,10 @@ El middleware `authorize` permite definir qué roles pueden acceder a una ruta.
 
 Por ejemplo:
 
-```js
+js
 authorize("organizer", "admin")
 
-```md
+md
 permite el acceso únicamente a usuarios con rol `organizer` o `admin`.
 
 Si el usuario está autenticado pero no posee el rol requerido, se devuelve un código HTTP `403 Forbidden`.
@@ -439,6 +441,111 @@ Sin una cookie JWT válida se devuelve `401 Unauthorized`.
 - `401 Unauthorized`: el usuario no está autenticado o el token no es válido.
 - `403 Forbidden`: el usuario está autenticado, pero no tiene permisos suficientes para realizar la acción.
 
+## Tickets e inscripciones
+
+Los tickets representan la inscripción de un usuario a un evento.
+
+La entidad `Ticket` contiene los siguientes campos:
+
+- `user`: referencia `ObjectId` al usuario.
+- `event`: referencia `ObjectId` al evento.
+- `status`: estado del ticket.
+- `quantity`: cantidad de lugares reservados.
+- `reservationCode`: código único de reserva.
+- `createdAt`: fecha de creación.
+- `cancelledAt`: fecha de cancelación.
+
+Las referencias a usuarios y eventos se almacenan mediante `ObjectId` y no se utilizan objetos embebidos.
+
+### Estados de los tickets
+
+Los tickets pueden tener los siguientes estados:
+
+- `confirmed`
+- `pending`
+- `cancelled`
+
+Los tickets cancelados no se eliminan físicamente de la base de datos.
+
+### Inscribirse a un evento
+
+POST /api/events/:eid/tickets
+
+Requiere autenticación.
+
+Body:
+
+json
+{
+  "quantity": 2
+}
+
+
+## Arquitectura en capas
+
+El proyecto utiliza una arquitectura separada en capas para desacoplar las responsabilidades de la aplicación.
+
+### DAO
+
+Los DAO son la única capa que accede directamente a los modelos de Mongoose.
+
+Se encargan de realizar las operaciones de acceso a datos como crear, buscar, actualizar y contar documentos.
+
+Se encuentran en:
+
+src/dao/
+
+### Repository
+
+Los Repository utilizan los DAO correspondientes y exponen métodos orientados al dominio.
+
+Se encuentran en:
+
+src/repositories/
+
+### Services
+
+Los Services contienen la lógica de negocio de la aplicación.
+
+Se encargan de validar reglas de negocio, estados de eventos, disponibilidad de cupos, inscripciones duplicadas, permisos sobre recursos propios y envío de emails.
+
+Se encuentran en:
+
+src/services/
+
+### Controllers
+
+Los Controllers coordinan las solicitudes HTTP.
+
+Extraen información del request, llaman a los Services y construyen la respuesta HTTP.
+
+No acceden directamente a los modelos de Mongoose.
+
+Se encuentran en:
+
+src/controllers/
+
+### DTO
+
+Los DTO controlan la información que se expone en las respuestas de la API.
+
+Permiten evitar la exposición de información sensible como contraseñas y filtrar los datos de documentos relacionados cuando se utiliza populate.
+
+Se encuentran en:
+
+src/dto/
+
+### Flujo de la arquitectura
+
+El flujo general de una operación es:
+
+Controller → Service → Repository → DAO → Model
+
+Para las respuestas:
+
+Model → DAO → Repository → Service → Controller → DTO → Response
+
+
 ## Estado del proyecto
 
-Pre-entrega 6
+Pre-entrega 8

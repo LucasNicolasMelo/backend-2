@@ -1,7 +1,7 @@
 import { ticketRepository } from "../repositories/ticket.repository.js";
 import { eventRepository } from "../repositories/event.repository.js";
 import crypto from "crypto";
-import { getUserById } from "../repositories/users.repository.js";
+import { usersRepository } from "../repositories/users.repository.js";
 import { sendConfirmationEmail } from "./mail.service.js";
 
 export async function createTicket(userId, eventId, quantity) {
@@ -15,15 +15,21 @@ export async function createTicket(userId, eventId, quantity) {
     }
 
     if (event.status === "cancelled" || event.status === "finished") {
-        throw new Error("El evento no permite nuevas inscripciones");
+        const error = new Error("El evento no permite nuevas inscripciones");
+        error.status = 400;
+        throw error;
     }
 
     if (event.status !== "published") {
-        throw new Error("El evento no está publicado");
+        const error = new Error("El evento no está publicado");
+        error.status = 400;
+        throw error;
     }
 
-    if (!Number.isInteger(quantity) || quantity <= 0) {
-        throw new Error("La cantidad debe ser un número entero mayor a 0");
+   if (!Number.isInteger(quantity) || quantity <= 0) {
+        const error = new Error("La cantidad debe ser un número entero mayor a 0");
+        error.status = 400;
+        throw error;
     }
 
     const existingTicket =
@@ -33,9 +39,11 @@ export async function createTicket(userId, eventId, quantity) {
         );
 
     if (existingTicket) {
-        throw new Error(
+        const error = new Error(
             "El usuario ya tiene una inscripción activa para este evento"
         );
+        error.status = 409;
+        throw error;
     }
 
     const occupiedCapacity =
@@ -45,9 +53,11 @@ export async function createTicket(userId, eventId, quantity) {
         event.capacity - occupiedCapacity;
 
     if (availableCapacity < quantity) {
-        throw new Error(
+        const error = new Error(
             `No hay cupos suficientes. Cupos disponibles: ${availableCapacity}`
         );
+        error.status = 409;
+        throw error;
     }
 
     const reservationCode =
@@ -61,7 +71,7 @@ export async function createTicket(userId, eventId, quantity) {
         reservationCode
     });
 
-    const user = await getUserById(userId);
+    const user = await usersRepository.findById(userId);
 
     if (user) {
         await sendConfirmationEmail({
@@ -117,7 +127,9 @@ export async function cancelTicket(ticketId, userId, isAdmin = false) {
     }
 
     if (ticket.status === "cancelled") {
-        throw new Error("El ticket ya está cancelado");
+        const error = new Error("El ticket ya está cancelado");
+        error.status = 409;
+        throw error;
     }
 
     if (!isAdmin && String(ticket.user) !== String(userId)) {

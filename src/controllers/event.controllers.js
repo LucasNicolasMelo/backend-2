@@ -1,4 +1,5 @@
 import { createEvent, getEventById, getEvents, updateEvent, updateEventStatus } from "../services/event.service.js";
+import { eventDTO } from "../dto/event.dto.js";
 
 export async function getAll(req, res, next) {
     try {
@@ -10,7 +11,7 @@ export async function getAll(req, res, next) {
         return res.status(200).json({
             status: "success",
             payload: {
-                data: result.data,
+                data: result.data.map(eventDTO),
                 page,
                 limit,
                 total: result.total,
@@ -41,7 +42,7 @@ export async function create(req, res, next) {
 
         return res.status(201).json({
             status: "success",
-            payload: event
+            payload: eventDTO(event)
         });
 
     } catch (error) {
@@ -53,30 +54,16 @@ export async function update(req, res, next) {
     try {
         const { eventId } = req.params;
 
-        const event = await getEventById(eventId);
-
-        if (!event) {
-            return res.status(404).json({
-                status: "error",
-                message: "Evento no encontrado"
-            });
-        }
-
-        if (
-            req.user.role !== "admin" &&
-            String(event.organizer) !== String(req.user.id)
-        ) {
-            return res.status(403).json({
-                status: "error",
-                message: "No tenés permisos para modificar este evento"
-            });
-        }
-
-        const updatedEvent = await updateEvent(eventId, req.body);
+        const updatedEvent = await updateEvent(
+            eventId,
+            req.body,
+            req.user.id,
+            req.user.role
+        );
 
         return res.status(200).json({
             status: "success",
-            payload: updatedEvent
+            payload: eventDTO(updatedEvent)
         });
 
     } catch (error) {
@@ -90,16 +77,9 @@ export async function getById(req, res, next) {
 
         const event = await getEventById(eventId);
 
-        if (!event) {
-            return res.status(404).json({
-                status: "error",
-                message: "Evento no encontrado"
-            });
-        }
-
         return res.status(200).json({
             status: "success",
-            payload: event
+            payload: eventDTO(event)
         });
 
     } catch (error) {
@@ -112,30 +92,16 @@ export async function changeStatus(req, res, next) {
         const { eventId } = req.params;
         const { status } = req.body;
 
-        const event = await getEventById(eventId);
-
-        if (!event) {
-            return res.status(404).json({
-                status: "error",
-                message: "Evento no encontrado"
-            });
-        }
-
-        if (
-            req.user.role !== "admin" &&
-            String(event.organizer) !== String(req.user.id)
-        ) {
-            return res.status(403).json({
-                status: "error",
-                message: "No tenés permisos para modificar este evento"
-            });
-        }
-
-        const updatedEvent = await updateEventStatus(eventId, status);
+        const updatedEvent = await updateEventStatus(
+            eventId,
+            status,
+            req.user.id,
+            req.user.role
+        );
 
         return res.status(200).json({
             status: "success",
-            payload: updatedEvent
+            payload: eventDTO(updatedEvent)
         });
 
     } catch (error) {

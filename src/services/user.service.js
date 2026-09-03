@@ -1,5 +1,5 @@
-import { getAllUsers } from "../repositories/users.repository.js";
+import { usersRepository } from "../repositories/users.repository.js";
 
 export async function getAllUsersService() {
-    return await getAllUsers();
+    return await usersRepository.findAll();
 }

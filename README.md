@@ -66,8 +66,10 @@ backend-2/
 │   ├── services/
 │   ├── repositories/
 │   ├── dao/
+│   ├── dto/
 │   ├── models/
 │   ├── middlewares/
+│   └── utils/
 │   └── utils.js
 ├── .env
 ├── .env.example
@@ -77,6 +79,26 @@ backend-2/
 └── README.md
 
 ## Rutas disponibles
+
+### Endpoints principales
+
+| Método | Endpoint | Autenticación | Descripción |
+|---|---|---|---|
+| GET | `/api/health` | No | Verificar estado del servidor |
+| POST | `/api/sessions/register` | No | Registrar usuario |
+| POST | `/api/sessions/login` | No | Iniciar sesión |
+| GET | `/api/sessions/current` | Sí | Obtener usuario autenticado |
+| POST | `/api/sessions/logout` | No | Cerrar sesión |
+| GET | `/api/users` | Sí + admin | Listar usuarios |
+| GET | `/api/events` | No | Listar eventos |
+| GET | `/api/events/:eventId` | No | Obtener evento por ID |
+| POST | `/api/events` | Sí + organizer/admin | Crear evento |
+| PUT | `/api/events/:eventId` | Sí + organizer/admin | Modificar evento |
+| PATCH | `/api/events/:eventId/status` | Sí + organizer/admin | Cambiar estado |
+| POST | `/api/events/:eid/tickets` | Sí | Inscribirse a evento |
+| GET | `/api/events/:eid/tickets` | Sí + dueño/admin | Ver tickets de un evento |
+| GET | `/api/tickets/my-tickets` | Sí | Ver mis tickets |
+| PATCH | `/api/tickets/:tid/cancel` | Sí + dueño/admin | Cancelar ticket |
 
 ### Health
 
@@ -358,6 +380,37 @@ Las contraseñas de los usuarios se almacenan utilizando bcrypt.
 
 La configuración de Passport se encuentra centralizada en `src/config/passport.config.js`, permitiendo agregar futuras estrategias o providers externos como Google o GitHub sin modificar `app.js`.
 
+### Flujo de autenticación
+
+El flujo de autenticación de la API es el siguiente:
+
+1. El usuario se registra mediante `POST /api/sessions/register`.
+2. El usuario inicia sesión mediante `POST /api/sessions/login`.
+3. Passport valida las credenciales y se genera un JWT.
+4. El JWT se almacena en la cookie HTTP Only `currentUser`.
+5. Las rutas protegidas utilizan el middleware `auth` para validar el token.
+6. El usuario autenticado queda disponible en `req.user`.
+7. El endpoint `GET /api/sessions/current` permite consultar la sesión actual.
+8. `POST /api/sessions/logout` elimina la cookie y finaliza la sesión.
+9. Si se intenta acceder a una ruta protegida sin una sesión válida, la API devuelve `401 Unauthorized`.
+10. Si el usuario está autenticado pero no posee el rol necesario, la API devuelve `403 Forbidden`.
+
+### Flujo de inscripción
+
+El flujo para inscribirse a un evento es:
+
+1. Un usuario con rol `organizer` o `admin` crea un evento mediante `POST /api/events`.
+2. El evento debe encontrarse en estado `published` para permitir inscripciones.
+3. Un usuario autenticado realiza `POST /api/events/:eid/tickets` indicando la cantidad de lugares.
+4. El Service verifica que el evento exista y esté publicado.
+5. Se verifica que el usuario no tenga una inscripción activa para el mismo evento.
+6. Se calcula la cantidad de cupos ocupados y disponibles.
+7. Si existen cupos suficientes, se crea el ticket con un código de reserva único.
+8. Se envía un email de confirmación mediante Nodemailer.
+9. El usuario puede consultar sus tickets mediante `GET /api/tickets/my-tickets`.
+10. El ticket puede cancelarse mediante `PATCH /api/tickets/:tid/cancel`.
+11. Los tickets cancelados no cuentan como cupo ocupado y permiten realizar una nueva inscripción.
+
 ## Roles y autorización
 
 El sistema maneja tres roles de usuario:
@@ -367,6 +420,27 @@ El sistema maneja tres roles de usuario:
 - `admin`: administrador del sistema.
 
 El rol se establece por defecto como `user` durante el registro público. No es posible asignar los roles `organizer` o `admin` desde el endpoint público de registro.
+
+### Usuarios de prueba
+
+Para probar los diferentes permisos de la API se pueden crear usuarios mediante `POST /api/sessions/register`.
+
+El registro público crea automáticamente usuarios con rol `user`.
+
+Para probar los roles `organizer` y `admin`, se deben utilizar usuarios previamente configurados con esos roles en la base de datos.
+
+Ejemplo de usuario `user`:
+
+json
+{
+  "first_name": "Lucas",
+  "last_name": "Melo",
+  "email": "lucas@test.com",
+  "password": "123456"
+}
+
+
+Los usuarios creados mediante el registro público reciben el rol `user` por defecto y no pueden asignar `organizer` o `admin` desde el body.
 
 ### Matriz de permisos
 
@@ -481,6 +555,57 @@ json
 }
 
 
+La inscripción valida que:
+
+- El evento exista.
+- El evento se encuentre en estado `published`.
+- La cantidad sea un número entero mayor a 0.
+- El usuario no tenga una inscripción activa previa para el mismo evento.
+- Existan cupos suficientes.
+
+Si la inscripción es exitosa, se genera un código único de reserva y se envía un email de confirmación.
+
+Si no hay cupos suficientes o existe una inscripción activa, se devuelve `409 Conflict`.
+
+### Mis tickets
+
+GET /api/tickets/my-tickets
+
+Requiere autenticación.
+
+Devuelve únicamente los tickets correspondientes al usuario autenticado.
+
+Los datos básicos del evento se obtienen mediante `populate`.
+
+La respuesta no expone información sensible del usuario.
+
+### Tickets de un evento
+
+GET /api/events/:eid/tickets
+
+Requiere autenticación y rol `organizer` o `admin`.
+
+Los organizadores solamente pueden consultar los tickets de sus propios eventos.
+
+Los administradores pueden consultar los tickets de cualquier evento.
+
+La respuesta utiliza DTO para controlar la información del usuario relacionado.
+
+### Cancelar ticket
+
+PATCH /api/tickets/:tid/cancel
+
+Requiere autenticación.
+
+El usuario solamente puede cancelar sus propios tickets.
+
+Los administradores pueden cancelar cualquier ticket.
+
+La cancelación no elimina el documento de la base de datos. El ticket pasa al estado `cancelled` y se registra la fecha en `cancelledAt`.
+
+Los tickets cancelados dejan de contar como cupo ocupado y permiten realizar una nueva inscripción.
+
+
 ## Arquitectura en capas
 
 El proyecto utiliza una arquitectura separada en capas para desacoplar las responsabilidades de la aplicación.
@@ -548,4 +673,4 @@ Model → DAO → Repository → Service → Controller → DTO → Response
 
 ## Estado del proyecto
 
-Pre-entrega 8
+Entrega final

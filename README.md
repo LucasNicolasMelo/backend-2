@@ -76,21 +76,172 @@ backend-2/
 
 ## Rutas disponibles
 
+### Health
+
 GET /api/health
+
+Ruta pública para verificar que el servidor se encuentra activo.
+
+## Eventos
+
+La entidad `Event` contiene los siguientes campos:
+
+- `title`: título del evento.
+- `description`: descripción.
+- `category`: categoría.
+- `date`: fecha del evento.
+- `location`: ubicación.
+- `capacity`: capacidad máxima.
+- `price`: precio.
+- `status`: estado del evento.
+- `organizer`: referencia al usuario organizador.
+
+El campo `organizer` almacena una referencia `ObjectId` al modelo de usuario y no un usuario embebido.
+
+### Estados disponibles
+
+Los eventos pueden tener los siguientes estados:
+
+- `draft`
+- `published`
+- `cancelled`
+- `finished`
+
+Los eventos cancelados no se eliminan físicamente de la base de datos.
+
+### Crear evento
+
+POST /api/events
+
+Requiere autenticación y rol organizer o admin.
+
+Ejemplo:
+
+{
+  "title": "Workshop de prueba",
+  "description": "Evento para probar la plataforma",
+  "category": "workshop",
+  "date": "2027-07-20",
+  "location": "Buenos Aires",
+  "capacity": 100,
+  "price": 500,
+  "status": "draft"
+}
+
+El organizer se asigna automáticamente a partir del usuario autenticado y no puede enviarse desde el body.
+
+### Listar eventos
 
 GET /api/events
 
-GET /api/users
+La ruta es pública y permite utilizar filtros, paginación y ordenamiento.
 
-GET /api/tickets
+### Filtros
 
-POST /api/sessions/register
+Por estado:
 
-POST /api/sessions/login
+GET /api/events?status=published
 
-GET /api/sessions/current
+Por categoría:
 
-POST /api/sessions/logout
+GET /api/events?category=workshop
+
+Por ubicación:
+
+GET /api/events?location=Buenos Aires
+
+Por rango de fechas:
+
+GET /api/events?dateFrom=2027-01-01&dateTo=2027-12-31
+
+Los filtros pueden combinarse:
+
+GET /api/events?status=published&category=workshop
+
+### Paginación
+
+Se utilizan los parámetros:
+
+page: número de página.
+limit: cantidad de resultados por página.
+
+Ejemplo:
+
+GET /api/events?page=2&limit=5
+
+### Ordenamiento
+
+El listado permite ordenar mediante el parámetro sort.
+
+Ejemplo:
+
+GET /api/events?sort=date
+
+### Ejemplo completo
+
+GET /api/events?status=published&category=workshop&page=2&limit=5
+
+La respuesta incluye:
+
+{
+  "status": "success",
+  "payload": {
+    "data": [],
+    "page": 2,
+    "limit": 5,
+    "total": 0,
+    "totalPages": 0
+  }
+}
+### Obtener evento por ID
+
+GET /api/events/:eventId
+
+Ruta pública.
+
+Si el evento no existe, devuelve 404 Not Found.
+
+### Modificar evento
+
+PUT /api/events/:eventId
+
+Requiere autenticación y rol organizer o admin.
+
+Los organizadores solamente pueden modificar sus propios eventos.
+
+Los administradores pueden modificar cualquier evento.
+
+Los eventos cancelados no pueden modificarse.
+
+### Cambiar estado
+
+PATCH /api/events/:eventId/status
+
+Body:
+
+{
+  "status": "published"
+}
+
+Requiere autenticación y rol organizer o admin.
+
+Los eventos cancelados no pueden volver a modificarse.
+
+Un evento finalizado no puede pasar nuevamente a published.
+
+### Reglas de negocio
+
+Las validaciones de negocio se encuentran implementadas en los services.
+
+No se permite crear un evento con fecha pasada.
+No se permite modificar un evento utilizando una fecha pasada.
+Las fechas inválidas son rechazadas.
+La capacidad debe ser mayor a 0.
+El precio debe ser mayor o igual a 0.
+Los estados permitidos son draft, published, cancelled y finished.
+No se puede publicar un evento finalizado.
+No se puede modificar un evento cancelado.
+La cancelación se realiza cambiando su estado a cancelled, sin eliminar físicamente el documento.
 
 ## Registro de usuario
 
@@ -290,4 +441,4 @@ Sin una cookie JWT válida se devuelve `401 Unauthorized`.
 
 ## Estado del proyecto
 
-Pre-entrega 5
+Pre-entrega 6
